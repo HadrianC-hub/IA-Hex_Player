@@ -12,7 +12,7 @@ class HexBoard:
 
     def place_piece(self, row: int, col: int, player_id: int) -> bool:
         """Coloca una ficha si la casilla está vacía"""
-        if  self.board[row][col] is 0:
+        if self.board[row][col] == 0:
             self.board[row][col] = player_id
             return True # Caso en que una casilla es colocada
         return False    # Caso en que una casilla no se pudo colocar
@@ -22,7 +22,7 @@ class HexBoard:
         result = []
         for i in range(self.size):
             for j in range (self.size):
-                if self.board[i][j] is 0:
+                if self.board[i][j] == 0:
                     result.append((i,j))
         return result
    
