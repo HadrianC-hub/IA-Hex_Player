@@ -24,10 +24,12 @@ class HumanPlayer(Player):
                 print("Formato incorrecto. Usa: fila,columna (ej. 1,2)")
 
 def print_board(board: HexBoard):
-    """Imprimir tablero actual en pantalla"""
+    """Imprime el tablero en formato hexagonal estilo zig-zag"""
     print("\nTablero actual:")
     for i in range(board.size):
-        print(" " * i, end="")  # Indentación para simular tablero hexagonal
+        if i % 2 == 0:
+            print(" ", end="")  # Indenta solo las filas impares
+
         for j in range(board.size):
             cell = board.board[i][j]
             if cell == 0:
@@ -38,6 +40,7 @@ def print_board(board: HexBoard):
                 print(BLUE, end=" ")
         print()
     print()
+
 
 def choose_players(): # Selección de jugador
     print("Elige modo de juego:")
