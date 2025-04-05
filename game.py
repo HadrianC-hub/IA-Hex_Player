@@ -4,12 +4,13 @@ from base_class_hexboard import HexBoard
 from base_class_player import Player
 from player import HexAIPlayer
 
-# Colores ANSI
+# Definición de casillas a mostrar
 RED = "1"
 BLUE = "2"
 EMPTY = "."
 
-class HumanPlayer(Player):
+class HumanPlayer(Player): 
+    """Implementación del jugador humano"""
     def play(self, board: HexBoard) -> tuple:
         while True:
             try:
@@ -23,6 +24,7 @@ class HumanPlayer(Player):
                 print("Formato incorrecto. Usa: fila,columna (ej. 1,2)")
 
 def print_board(board: HexBoard):
+    """Imprimir tablero actual en pantalla"""
     print("\nTablero actual:")
     for i in range(board.size):
         print(" " * i, end="")  # Indentación para simular tablero hexagonal
@@ -37,7 +39,7 @@ def print_board(board: HexBoard):
         print()
     print()
 
-def choose_players():
+def choose_players(): # Selección de jugador
     print("Elige modo de juego:")
     print("1. Jugador vs Jugador")
     print("2. Jugador vs IA")

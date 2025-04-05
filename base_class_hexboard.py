@@ -67,8 +67,9 @@ class HexBoard:
                 return True  # Alcanzó el borde derecho
             if player_id == 2 and r == self.size - 1:
                 return True  # Alcanzó el borde inferior
-
-            for nr, nc in get_neighbors(r, c):
+                
+            neighbors = get_neighbors(r, c)
+            for nr, nc in neighbors:
                 if not visited[nr][nc] and self.board[nr][nc] == player_id:
                     visited[nr][nc] = True
                     stack.append((nr, nc))
