@@ -6,8 +6,8 @@ class HexBoard:
          
     def clone(self) -> "HexBoard":
         """Devuelve una copia del tablero actual"""
-        board =  HexBoard(self.size)
-        board.board = self.board
+        board = HexBoard(self.size)
+        board.board = [row[:] for row in self.board]  # Hacer una copia profunda de cada fila
         return board
 
     def place_piece(self, row: int, col: int, player_id: int) -> bool:
@@ -67,7 +67,7 @@ class HexBoard:
                 return True  # Alcanzó el borde derecho
             if player_id == 2 and r == self.size - 1:
                 return True  # Alcanzó el borde inferior
-                
+
             neighbors = get_neighbors(r, c)
             for nr, nc in neighbors:
                 if not visited[nr][nc] and self.board[nr][nc] == player_id:
