@@ -3,7 +3,9 @@ from base_class_hexboard import HexBoard
 import random
 import math
 import heapq
-from copy import deepcopy
+
+DIRECTIONS_EVEN = [(-1, 0), (1, 0), (-1, 1), (1, 1), (0, -1), (0, 1)]
+DIRECTIONS_ODD = [(-1, 0), (1, 0), (-1, -1), (1, -1), (0, -1), (0, 1)]
 
 class HexAIPlayer(Player):
     def __init__(self, player_id: int, depth=3):
@@ -12,26 +14,60 @@ class HexAIPlayer(Player):
         self.opponent_id = 2 if player_id == 1 else 1   # Id del oponente
 
     def play(self, board: HexBoard) -> tuple:
-        _, move = self.minimax(board, self.depth, -math.inf, math.inf, True)
+        # Verificar si hay una jugada que gana inmediatamente
+        pos_moves = board.get_possible_moves()
+        length_moves = len(pos_moves)
+        for move in pos_moves:
+            temp_board = board.clone()
+            temp_board.place_piece(*move, self.player_id)
+            if temp_board.check_connection(self.player_id):
+                return move
+
+        # Si no hay jugada ganadora inmediata, usar minimax
+        dynamic_depth = self.get_dynamic_depth(board, length_moves)
+        _, move = self.minimax(board, dynamic_depth, -math.inf, math.inf, True)
         return move
+
+    def get_dynamic_depth(self, board: HexBoard, empty_cells) -> int: # Función para obtener la fase del juego (útil para la profundidad variable)
+        
+        total_cells = board.size * board.size
+        ratio = empty_cells / total_cells
+
+        if ratio > 0.75:
+            return 2  # Early game
+        elif ratio > 0.5:
+            return 3  # Mid-early
+        elif ratio > 0.25:
+            return 4  # Mid-late
+        else:
+            return 5  # Endgame
 
     def minimax(self, board, depth, alpha, beta, maximizing_player): # alpha = Mejor valor (MAX) que la IA puede asegurar hasta ahora     
                                                                      # beta = Mejor valor (MIN) que el oponente puede asegurar
                                                                      # maximizing_player = Booleano que indica si es o no el turno de la IA
 
         # Caso base: Si ya se llegó a la profundidad esperada o el juego terminó, evalúa con heurística y devuelve el valor
-        if depth == 0 or board.check_connection(self.player_id) or board.check_connection(self.opponent_id):
+        if board.check_connection(self.player_id):
+            return math.inf, None
+        elif board.check_connection(self.opponent_id):
+            return -math.inf, None
+        elif depth == 0 or not board.get_possible_moves():
             return self.evaluate(board), None
 
         best_move = None
         moves = board.get_possible_moves()
-        random.shuffle(moves)  # Para evitar siempre la misma jugada
+
+        # Ordenar movimientos antes de evaluarlos según la heurística utilizada
+        if maximizing_player: # Si estamos maximizando al jugador, ordenar jugadas por valores de mayor a menor según la heurística
+            moves.sort(key=lambda move: self.evaluate_after_move(board, move, self.player_id), reverse=True)
+        else:   # Si estamos minimizando, ordenar jugadas por valores de menor a mayor segun la heurística
+            moves.sort(key=lambda move: self.evaluate_after_move(board, move, self.opponent_id), reverse=False)
 
         # Evaluando jugada: Caso turno de IA
         if maximizing_player: # Caso: Turno de la IA (escoger mejor jugada)
             max_eval = -math.inf
             for move in moves: # Ciclo de evaluación de jugadas disponibles
-                new_board = deepcopy(board)
+                new_board = board.clone()
                 new_board.place_piece(*move, self.player_id)
                 eval, _ = self.minimax(new_board, depth - 1, alpha, beta, False) # Se evalúa cuán bueno es el 'futuro' tras esa jugada
                 if eval > max_eval: # Procedemos a quedarnos con la mejor evaluación entre la que teníamos y esta
@@ -40,12 +76,16 @@ class HexAIPlayer(Player):
                 alpha = max(alpha, eval)
                 if beta <= alpha: # Si mi jugada actual no supera a la peor jugada del rival, no tiene sentido seguir explorando esa rama 
                     break
+            if best_move is None and moves:
+                # Si no se eligió jugada por poda u otra razón, elegimos una jugada para molestar al rival
+                fallback_move = self.defensive_fallback_move(board, moves)
+                return max_eval, fallback_move
             return max_eval, best_move
         # Evaluando jugada: Caso turno de oponente
         else:
             min_eval = math.inf
             for move in moves:
-                new_board = deepcopy(board)
+                new_board = board.clone()
                 new_board.place_piece(*move, self.opponent_id)
                 eval, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
                 if eval < min_eval:
@@ -54,76 +94,93 @@ class HexAIPlayer(Player):
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
+            if best_move is None and moves:
+                # Si no se eligió jugada por poda u otra razón, elegimos una jugada para molestar al rival
+                fallback_move = self.defensive_fallback_move(board, moves)
+                return min_eval, fallback_move
             return min_eval, best_move
 
-    def evaluate(self, board): # Evaluar el estado actual del tablero (para asignar valores a los nodos)
-        return (
-            1000 * self.a_star(board, self.opponent_id) -   # Penaliza si el oponente está cerca de ganar
-            self.a_star(board, self.player_id) +            # Bonifica si nosotros estamos cerca de ganar
-            self.centrality_score(board) +                  # Bonifica posiciones cerca del centro, esto da más flexibilidad y mejores opciones de jugada que una posición cerca del borde o de una esquina
-            self.connection_potential(board)                
-        )
+    def evaluate_after_move(self, board: HexBoard, move, player_id): # Evalúa rápidamente un tablero como si el jugador hiciera esa jugada
+        temp_board = board.clone()
+        temp_board.place_piece(*move, player_id)
+        return self.evaluate(temp_board)
+
+    def evaluate(self, board):
+        my_weights = self.a_star_weighted_moves(board, self.player_id)
+        opponent_weights = self.a_star_weighted_moves(board, self.opponent_id)
+
+        my_score = sum(my_weights.values())
+        opponent_score = sum(opponent_weights.values())
+        
+        connection_score = self.connection_potential(board)
+
+        # Evaluación final con ponderación dinámica
+        return my_score - opponent_score #+ connection_score
 
     def neighbors(self, row, col, board):
-        directions_even = [(-1, 0), (1, 0), (-1, 1), (1, 1), (0, -1), (0, 1)]   # Direcciones válidas a conectar para filas pares
-        directions_odd = [(-1, 0), (1, 0), (-1, -1), (1, -1), (0, -1), (0, 1)]  # Direcciones válidas a conectar para filas impares
-        dirs = directions_even if row % 2 == 0 else directions_odd
+        dirs = DIRECTIONS_EVEN if row % 2 == 0 else DIRECTIONS_ODD
         # Obteniendo vecinos
         neighbors = []
+        size = board.size
         for dr, dc in dirs:
             nr, nc = row + dr, col + dc
-            if 0 <= nr < board.size and 0 <= nc < board.size:
+            if 0 <= nr < size and 0 <= nc < size:
                 neighbors.append((nr, nc))
         return neighbors
 
-    def a_star(self, board, player_id): # Encontrar el camino mínimo de un lado a otro (o de arriba a abajo)
+    def a_star_weighted_moves(self, board, player_id):
         size = board.size
         frontier = []
         visited = set()
+        weight_map = {}
 
-        def is_goal(r, c):  # Verificar si llegamos al final
-            if player_id == 1:
-                return c == size - 1
-            else:
-                return r == size - 1
+        def heuristic(r, c):
+            return size - 1 - c if player_id == 1 else size - 1 - r
 
-        # Lados de inicio
+        def is_goal(r, c):
+            return c == size - 1 if player_id == 1 else r == size - 1
+
         for i in range(size):
             if player_id == 1 and board.board[i][0] in [0, player_id]:
-                heapq.heappush(frontier, (0, i, 0))
+                heapq.heappush(frontier, (0 + heuristic(i, 0), 0, i, 0))
             elif player_id == 2 and board.board[0][i] in [0, player_id]:
-                heapq.heappush(frontier, (0, 0, i))
+                heapq.heappush(frontier, (0 + heuristic(0, i), 0, 0, i))
 
         while frontier:
-            cost, r, c = heapq.heappop(frontier)
+            priority, cost, r, c = heapq.heappop(frontier)
             if (r, c) in visited:
                 continue
             visited.add((r, c))
 
+            if board.board[r][c] == 0:
+                bonus = self.centrality_bonus(size, r, c) + self.connection_bonus(board, r, c, player_id)
+                weight_map[(r, c)] = weight_map.get((r, c), 0) + bonus
+
             if is_goal(r, c):
-                return cost
+                continue
 
             for nr, nc in self.neighbors(r, c, board):
                 if 0 <= nr < size and 0 <= nc < size:
                     cell = board.board[nr][nc]
                     if cell in [0, player_id]:
-                        priority = cost + (1 if cell == 0 else 0)
-                        heapq.heappush(frontier, (priority, nr, nc))
-        return 9999  # No hay camino posible
+                        new_cost = cost + (1 if cell == 0 else 0)
+                        heapq.heappush(frontier, (new_cost + heuristic(nr, nc), new_cost, nr, nc))
 
-    def centrality_score(self, board):
-        size = board.size
-        score = 0
+        return weight_map
+
+    def centrality_bonus(self, size, r, c): # Agrega un bono a las casillas cercanas al centro (Usada en A*)
         center = size // 2
-        for i in range(size):
-            for j in range(size):
-                if board.board[i][j] == self.player_id:
-                    dist = abs(center - i) + abs(center - j)
-                    score += max(0, 10 - dist)
-        return score
+        dist = abs(center - r) + abs(center - c)
+        return max(0, 10 - dist)
 
-    def connection_potential(self, board):
-        # Heurística inspirada en el DFS de check_connection: mide cuántos nodos propios están conectados en grupo
+    def connection_bonus(self, board, r, c, player_id): # Agrega un bono a las casillas cercanas de otras casillas del jugador (Usada en A*)
+        nearby = 0
+        for nr, nc in self.neighbors(r, c, board):
+            if board.board[nr][nc] == player_id:
+                nearby += 1
+        return nearby * 10
+
+    def connection_potential(self, board): # Heurística inspirada en el DFS de check_connection: mide cuántos nodos propios están conectados en grupo
         size = board.size
         visited = set()
         score = 0
@@ -150,3 +207,21 @@ class HexAIPlayer(Player):
                     score += connected ** 2  # Más peso a grupos grandes
         return score
 
+    def defensive_fallback_move(self, board, moves):
+        # Evalúa qué jugada complica más al oponente (minimiza su evaluación)
+        min_opponent_eval = math.inf
+        best_defensive_move = None
+
+        for move in moves:
+            temp_board = board.clone()
+            temp_board.place_piece(*move, self.player_id)
+            eval_for_opponent = self.evaluate_after_move(temp_board, move, self.opponent_id)
+            if eval_for_opponent < min_opponent_eval:
+                min_opponent_eval = eval_for_opponent
+                best_defensive_move = move
+
+        # Si no encuentra jugada útil, elige una aleatoria como última opción
+        if best_defensive_move is None and moves:
+            best_defensive_move = random.choice(moves)
+
+        return best_defensive_move
