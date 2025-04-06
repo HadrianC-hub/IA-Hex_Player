@@ -115,7 +115,7 @@ class HexAIPlayer(Player):
         connection_score = self.connection_potential(board)
 
         # Evaluación final con ponderación dinámica
-        return my_score - opponent_score #+ connection_score
+        return my_score - opponent_score + connection_score
 
     def neighbors(self, row, col, board):
         dirs = DIRECTIONS_EVEN if row % 2 == 0 else DIRECTIONS_ODD
