@@ -3,9 +3,11 @@ from base_class_hexboard import HexBoard
 import random
 import math
 import heapq
+import time
 
 DIRECTIONS_EVEN = [(-1, 0), (1, 0), (-1, 1), (1, 1), (0, -1), (0, 1)]
 DIRECTIONS_ODD = [(-1, 0), (1, 0), (-1, -1), (1, -1), (0, -1), (0, 1)]
+TIME_LIMIT = 3.0
 
 class HexAIPlayer(Player):
     def __init__(self, player_id: int, depth=3):
@@ -14,6 +16,10 @@ class HexAIPlayer(Player):
         self.opponent_id = 2 if player_id == 1 else 1   # Id del oponente
 
     def play(self, board: HexBoard) -> tuple:
+        #Iniciar el temporizador
+        start_time = time.time()
+        self.start_time = start_time
+
         # Verificar si hay una jugada que gana inmediatamente
         pos_moves = board.get_possible_moves()
         length_moves = len(pos_moves)
@@ -26,6 +32,9 @@ class HexAIPlayer(Player):
         # Si no hay jugada ganadora inmediata, usar minimax
         dynamic_depth = self.get_dynamic_depth(board, length_moves)
         _, move = self.minimax(board, dynamic_depth, -math.inf, math.inf, True)
+
+        duration = time.time() - start_time
+        print(f"Tiempo total de jugada: {duration:.3f}s")
         return move
 
     def get_dynamic_depth(self, board: HexBoard, empty_cells) -> int: # Función para obtener la fase del juego (útil para la profundidad variable)
@@ -43,6 +52,10 @@ class HexAIPlayer(Player):
     def minimax(self, board, depth, alpha, beta, maximizing_player): # alpha = Mejor valor (MAX) que la IA puede asegurar hasta ahora     
                                                                      # beta = Mejor valor (MIN) que el oponente puede asegurar
                                                                      # maximizing_player = Booleano que indica si es o no el turno de la IA
+
+        # Cortamos la evaluación si nos pasamos de tiempo
+        if time.time() - self.start_time > TIME_LIMIT:
+            return self.evaluate(board), None
 
         # Caso base: Si ya se llegó a la profundidad esperada o el juego terminó, evalúa con heurística y devuelve el valor
         if board.check_connection(self.player_id):
@@ -178,25 +191,21 @@ class HexAIPlayer(Player):
         heap = []
 
         def heuristic(row, col):
-            # Heurística: distancia Manhattan al borde opuesto (simplificada)
-            return row if player_id == 2 else col
+        # Heurística: distancia Manhattan al borde opuesto
+            return size - 1 - (col if player_id == 1 else row)
 
         def is_goal(row, col):
-            if player_id == 1:
-                return col == size - 1
-            else:
-                return row == size - 1
+            return (col == size - 1) if player_id == 1 else (row == size - 1)
 
-        # Inicializar frontera: bordes iniciales del jugador
         for i in range(size):
             row, col = (i, 0) if player_id == 1 else (0, i)
             if board.board[row][col] == player_id:
-                heapq.heappush(heap, (0, row, col))
+                heapq.heappush(heap, (heuristic(row, col), 0, row, col))
             elif board.board[row][col] == 0:
-                heapq.heappush(heap, (1, row, col))
+                heapq.heappush(heap, (1 + heuristic(row, col), 1, row, col))
 
         while heap:
-            cost, row, col = heapq.heappop(heap)
+            priority, cost, row, col = heapq.heappop(heap)
             if (row, col) in visited:
                 continue
             visited.add((row, col))
@@ -208,11 +217,8 @@ class HexAIPlayer(Player):
                 if (nr, nc) in visited:
                     continue
                 cell = board.board[nr][nc]
-                if cell == player_id:
-                    heapq.heappush(heap, (cost, nr, nc))
-                elif cell == 0:
-                    heapq.heappush(heap, (cost + 1, nr, nc))
-                # Oponente: no se expande por aquí
+                new_cost = cost if cell == player_id else cost + 1
+                heapq.heappush(heap, (new_cost + heuristic(nr, nc), new_cost, nr, nc))
 
         # Si no hay camino posible
         return math.inf
