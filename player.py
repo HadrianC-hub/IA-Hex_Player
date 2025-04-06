@@ -113,9 +113,10 @@ class HexAIPlayer(Player):
         opponent_score = sum(opponent_weights.values())
         
         connection_score = self.connection_potential(board)
+        blocking_score = self.blocking_potential(board)  # Añadimos el score por interrumpir cadenas
 
-        # Evaluación final con ponderación dinámica
-        return my_score - opponent_score + connection_score
+        # Evaluación final: favorece conexiones propias, interrumpir al oponente, y da un poco más de peso al centro en fases iniciales
+        return my_score - opponent_score + connection_score - blocking_score
 
     def neighbors(self, row, col, board):
         dirs = DIRECTIONS_EVEN if row % 2 == 0 else DIRECTIONS_ODD
@@ -207,15 +208,40 @@ class HexAIPlayer(Player):
                     score += connected ** 2  # Más peso a grupos grandes
         return score
 
+    def blocking_potential(self, board):
+        size = board.size
+        visited = set()
+        score = 0
+
+        def dfs(r, c):
+            stack = [(r, c)]
+            connected = 0
+            while stack:
+                r, c = stack.pop()
+                if (r, c) in visited:
+                    continue
+                visited.add((r, c))
+                connected += 1
+                for nr, nc in self.neighbors(r, c, board):
+                    if 0 <= nr < size and 0 <= nc < size:
+                        if board.board[nr][nc] == self.opponent_id and (nr, nc) not in visited:
+                            stack.append((nr, nc))
+            return connected
+
+        for i in range(size):
+            for j in range(size):
+                if board.board[i][j] == self.opponent_id and (i, j) not in visited:
+                    connected = dfs(i, j)
+                    score += connected ** 2
+        return score
+
     def defensive_fallback_move(self, board, moves):
         # Evalúa qué jugada complica más al oponente (minimiza su evaluación)
         min_opponent_eval = math.inf
         best_defensive_move = None
 
         for move in moves:
-            temp_board = board.clone()
-            temp_board.place_piece(*move, self.player_id)
-            eval_for_opponent = self.evaluate_after_move(temp_board, move, self.opponent_id)
+            eval_for_opponent = self.evaluate_after_move(board, move, self.opponent_id)
             if eval_for_opponent < min_opponent_eval:
                 min_opponent_eval = eval_for_opponent
                 best_defensive_move = move
