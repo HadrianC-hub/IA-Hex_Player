@@ -46,7 +46,8 @@ def choose_players(): # Selección de jugador
     print("Elige modo de juego:")
     print("1. Jugador vs Jugador")
     print("2. Jugador vs IA")
-    print("3. IA vs IA")
+    print("3. IA vs Jugador")
+    print("4. IA vs IA")
     choice = input("Opción (1/2/3): ")
 
     if choice == "1":
@@ -54,6 +55,8 @@ def choose_players(): # Selección de jugador
     elif choice == "2":
         return HumanPlayer(1), HexAIPlayer(2)
     elif choice == "3":
+        return HexAIPlayer(1), HumanPlayer(2)
+    elif choice == "4":
         return HexAIPlayer(1), HexAIPlayer(2)
     else:
         print("Opción inválida.")
