@@ -161,10 +161,11 @@ class HexAIPlayer(Player):
         # Centralidad y vecinos
         mid = size // 2
         for (r, c) in empty_cells:
+            # Cada casilla vacía cerca del centro aumenta el valor (posibles movimientos futuros)
             dist_center = abs(r - mid) + abs(c - mid)
             centrality_bonus = max(0, (size - dist_center))
             score += centrality_bonus * 0.5
-
+            # Aumenta o disminuye el peso de una casilla vacía en dependencia de sus vecinos
             friendly = 0
             enemy = 0
             for nr, nc in self.neighbors(r, c, board):
@@ -178,18 +179,18 @@ class HexAIPlayer(Player):
 
         return score
 
-    def a_star(self, board: HexBoard, player_id):
+    def a_star(self, board: HexBoard, player_id): # Devuelve el costo mínimo de unir dos lados
         size = board.size
         visited = set()
         heap = []
 
-        def heuristic(row, col):
-        # Heurística: distancia Manhattan al borde opuesto
+        def heuristic(row, col): # Heurística: distancia Manhattan al borde opuesto
             return size - 1 - (col if player_id == 1 else row)
 
-        def is_goal(row, col):
+        def is_goal(row, col): # Verifica conexiones existentes entre los lados del jugador
             return (col == size - 1) if player_id == 1 else (row == size - 1)
 
+        # Inicialmente se guardan las casillas que tocan uno de los lados en el espacio de búsqueda
         for i in range(size):
             row, col = (i, 0) if player_id == 1 else (0, i)
             if board.board[row][col] == player_id:
@@ -197,6 +198,7 @@ class HexAIPlayer(Player):
             elif board.board[row][col] == 0:
                 heapq.heappush(heap, (1 + heuristic(row, col), 1, row, col))
 
+        # Se intenta llegar desde aquí hasta el otro lado por algún camino existente y se aumenta el costo en consecuencia
         while heap:
             priority, cost, row, col = heapq.heappop(heap)
             if (row, col) in visited:
@@ -213,5 +215,5 @@ class HexAIPlayer(Player):
                 new_cost = cost if cell == player_id else cost + 1
                 heapq.heappush(heap, (new_cost + heuristic(nr, nc), new_cost, nr, nc))
 
-        # Si no hay camino posible
+        # No hay camino posible
         return math.inf
