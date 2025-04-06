@@ -141,6 +141,7 @@ class HexAIPlayer(Player):
         score = 0
         empty_cells = []
 
+        # Empieza buscando cada celda del jugador y del enemigo, sumando y restando puntos
         for row in range(size):
             for col in range(size):
                 cell = board.board[row][col]
@@ -149,13 +150,13 @@ class HexAIPlayer(Player):
                 elif cell == self.opponent_id:
                     score -= 10
                 else:
-                    empty_cells.append((row, col))
+                    empty_cells.append((row, col))  # Guarda las casillas vacías para análisis posterior
 
-        # A* heurístico (menor es mejor para ambos)
+        # A* heurístico
         my_path_cost = self.a_star(board, self.player_id)
         opp_path_cost = self.a_star(board, self.opponent_id)
-        score += 1000 / (1 + my_path_cost)
-        score -= 1000 / (1 + opp_path_cost)
+        score += 1000 / (1 + my_path_cost)  # Mientras más costoso sea el camino, menor es la puntuación
+        score -= 1000 / (1 + opp_path_cost) # Lo mismo para el análisis del jugador contrario
 
         # Centralidad y vecinos
         mid = size // 2
