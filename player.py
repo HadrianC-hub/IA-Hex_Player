@@ -10,9 +10,8 @@ DIRECTIONS_ODD = [(-1, 0), (1, 0), (-1, -1), (1, -1), (0, -1), (0, 1)]
 TIME_LIMIT = 3.0
 
 class HexAIPlayer(Player):
-    def __init__(self, player_id: int, depth=3):
+    def __init__(self, player_id: int):
         super().__init__(player_id) # Llamando al contructor de Player y asignando su player_id
-        self.depth = depth # Determina cuántos niveles de jugadas (Propia + oponente) va a analizar en profundidad
         self.opponent_id = 2 if player_id == 1 else 1   # Id del oponente
 
     def play(self, board: HexBoard) -> tuple:
@@ -20,19 +19,14 @@ class HexAIPlayer(Player):
         start_time = time.time()
         self.start_time = start_time
 
-        # Verificar si hay una jugada que gana inmediatamente
+        # Determinar profundidad dinámica (cuántos niveles de jugadas se van a analizar en minimax)
         pos_moves = board.get_possible_moves()
-        length_moves = len(pos_moves)
-        for move in pos_moves:
-            temp_board = board.clone()
-            temp_board.place_piece(*move, self.player_id)
-            if temp_board.check_connection(self.player_id):
-                return move
+        dynamic_depth = self.get_dynamic_depth(board, len(pos_moves))
 
-        # Si no hay jugada ganadora inmediata, usar minimax
-        dynamic_depth = self.get_dynamic_depth(board, length_moves)
+        # Usar minimax
         _, move = self.minimax(board, dynamic_depth, -math.inf, math.inf, True)
 
+        # Calcular tiempo y retornar
         duration = time.time() - start_time
         print(f"Tiempo total de jugada: {duration:.3f}s")
         return move
@@ -40,14 +34,12 @@ class HexAIPlayer(Player):
     def get_dynamic_depth(self, board: HexBoard, empty_cells) -> int: # Función para obtener la fase del juego (útil para la profundidad variable)
         total_cells = board.size * board.size
         ratio = empty_cells / total_cells
-        if ratio > 0.75:
-            return 3  # Early game
-        elif ratio > 0.5:
-            return 4  # Mid-early
-        elif ratio > 0.25:
-            return 5  # Mid-late
+        if ratio > 0.8:
+            return 3
+        elif ratio > 0.3:
+            return 5
         else:
-            return 6  # Endgame
+            return 7
 
     def minimax(self, board, depth, alpha, beta, maximizing_player): # alpha = Mejor valor (MAX) que la IA puede asegurar hasta ahora     
                                                                      # beta = Mejor valor (MIN) que el oponente puede asegurar
