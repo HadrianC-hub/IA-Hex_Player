@@ -196,14 +196,28 @@ class HexAIPlayer(Player):
                         if col > 0 and col < size - 1:
                             if (board.board[row][col - 1] == self.opponent_id and
                                 board.board[row][col + 1] == self.opponent_id):
-                                score += 20 + (importance*10) # Ajustable según la importancia del bloqueo
+                                score += 30 + (importance*10) # Ajustable según la importancia del bloqueo
                     else:
                         importance = row/size
                         # Buscamos si está rodeada verticalmente
                         if row > 0 and row < size - 1:
                             if (board.board[row - 1][col] == self.opponent_id and
                                 board.board[row + 1][col] == self.opponent_id):
-                                score += 20 + (importance*10)
+                                score += 30 + (importance*10)
+
+        # Evaluación de cadenas conectadas
+        chains_player = self.find_chains(board, self.player_id)
+        chains_opponent = self.find_chains(board, self.opponent_id)
+
+        # Recompensa cadenas largas propias
+        for chain in chains_player:
+            chain_length = len(chain)
+            score += 50 * chain_length
+
+        # Penaliza las cadenas largas del oponente
+        for chain in chains_opponent:
+            chain_length = len(chain)
+            score -= 50 * chain_length        
 
         return score
 
@@ -258,3 +272,27 @@ class HexAIPlayer(Player):
 
         return math.inf  # No hay camino posible
 
+    def find_chains(self, board: HexBoard, player_id: int):
+        # Encuentra todas las cadenas conectadas del jugador
+        size = board.size
+        visited = set()
+        chains = []
+
+        def dfs(row, col, chain):
+            if (row, col) in visited or not (0 <= row < size and 0 <= col < size):
+                return
+            if board.board[row][col] == player_id:
+                visited.add((row, col))
+                chain.append((row, col))
+                for nr, nc in self.neighbors(row, col, board):
+                    dfs(nr, nc, chain)
+
+        for row in range(size):
+            for col in range(size):
+                if (row, col) not in visited and board.board[row][col] == player_id:
+                    chain = []
+                    dfs(row, col, chain)
+                    if chain:
+                        chains.append(chain)
+
+        return chains
