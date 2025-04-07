@@ -157,8 +157,10 @@ class HexAIPlayer(Player):
         opp_path_cost = self.a_star(board, self.opponent_id)
         if opp_path_cost <= 3:
             score -= 300  # Penalización fuerte si el oponente casi conecta
-        score += 1000 / (1 + my_path_cost)  # Mientras más costoso sea el camino, menor es la puntuación
-        score -= 1000 / (1 + opp_path_cost) # Lo mismo para el análisis del jugador contrario
+        if my_path_cost != math.inf:
+            score += 1000 / (1 + my_path_cost)  # Mientras más costoso sea el camino, menor es la puntuación
+        if opp_path_cost != math.inf:
+            score -= 1000 / (1 + opp_path_cost) # Lo mismo para el análisis del jugador contrario
 
         # Centralidad y vecinos
         mid = size // 2
