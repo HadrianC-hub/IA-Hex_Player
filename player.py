@@ -205,25 +205,32 @@ class HexAIPlayer(Player):
 
         return score
 
-    def a_star(self, board: HexBoard, player_id): # Devuelve el costo mínimo de unir dos lados
+    def a_star(self, board: HexBoard, player_id):  # Devuelve el costo mínimo de unir dos lados
         size = board.size
         visited = set()
         heap = []
+        cost_so_far = {}    # Para evitar caminos peores y no volver a insertar caminos más costosos de forma innecesaria
 
         def heuristic(row, col): # Heurística: distancia Manhattan al borde opuesto
             return size - 1 - (col if player_id == 1 else row)
 
-        def is_goal(row, col): # Verifica conexiones existentes entre los lados del jugador
+        def is_goal(row, col): # Verifica si llegamos al lado opuesto
             return (col == size - 1) if player_id == 1 else (row == size - 1)
 
         # Inicialmente se guardan las casillas que tocan uno de los lados en el espacio de búsqueda
         for i in range(size):
             row, col = (i, 0) if player_id == 1 else (0, i)
-            if board.board[row][col] == player_id:
-                heapq.heappush(heap, (heuristic(row, col), 0, row, col))
-            elif board.board[row][col] == 0:
-                heapq.heappush(heap, (1 + heuristic(row, col), 1, row, col))
+            cell = board.board[row][col]
+            if cell == player_id:
+                cost = 0    # Costo cero para casillas propias
+            elif cell == 0:
+                cost = 1    # Costo uno para casillas vacías
+            else:
+                continue  # Casilla del oponente, no válida para iniciar
+            heapq.heappush(heap, (cost + heuristic(row, col), cost, row, col))
+            cost_so_far[(row, col)] = cost
 
+        # Analizando espacio de búsqueda
         while heap:
             priority, cost, row, col = heapq.heappop(heap)
             if (row, col) in visited:
@@ -238,12 +245,14 @@ class HexAIPlayer(Player):
                     continue
                 cell = board.board[nr][nc]
                 if cell == player_id:
-                    new_cost = cost  # Paso gratis por nuestras fichas
+                    new_cost = cost  # Paso gratis
                 elif cell == 0:
-                    new_cost = cost + 1  # Paso válido, leve coste
+                    new_cost = cost + 1  # Paso leve
                 else:
-                    continue  # Casilla del oponente, no transitable
-                heapq.heappush(heap, (new_cost + heuristic(nr, nc), new_cost, nr, nc))
+                    new_cost = cost + 5  # Penalización fuerte
+                if (nr, nc) not in cost_so_far or new_cost < cost_so_far[(nr, nc)]:
+                    cost_so_far[(nr, nc)] = new_cost
+                    heapq.heappush(heap, (new_cost + heuristic(nr, nc), new_cost, nr, nc))
 
         return math.inf  # No hay camino posible
 
