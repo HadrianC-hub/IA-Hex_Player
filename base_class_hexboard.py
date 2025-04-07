@@ -34,9 +34,8 @@ class HexBoard:
 
         # Definiendo función de adyacencia para obtener vecinos
         def get_neighbors(row, col):
-            directions_even = [(-1, 0), (1, 0), (-1, 1), (1, 1), (0, -1), (0, 1)]   # Direcciones válidas a conectar para filas pares
-            directions_odd = [(-1, 0), (1, 0), (-1, -1), (1, -1), (0, -1), (0, 1)]  # Direcciones válidas a conectar para filas impares
-            dirs = directions_even if row % 2 == 0 else directions_odd
+            directions = [(-1, 0), (1, 0), (-1, 1), (1, -1), (0, -1), (0, 1)]   # Direcciones válidas a conectar
+            dirs = directions
 
             # Obteniendo vecinos
             neighbors = []

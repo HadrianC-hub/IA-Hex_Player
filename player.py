@@ -5,8 +5,7 @@ import math
 import heapq
 import time
 
-DIRECTIONS_EVEN = [(-1, 0), (1, 0), (-1, 1), (1, 1), (0, -1), (0, 1)]
-DIRECTIONS_ODD = [(-1, 0), (1, 0), (-1, -1), (1, -1), (0, -1), (0, 1)]
+DIRECTIONS = [(-1, 0), (1, 0), (-1, 1), (1, -1), (0, -1), (0, 1)]
 TIME_LIMIT = 3.0
 
 class HexAIPlayer(Player):
@@ -109,7 +108,7 @@ class HexAIPlayer(Player):
         return self.evaluate(temp_board)
 
     def neighbors(self, row, col, board):
-        dirs = DIRECTIONS_EVEN if row % 2 == 0 else DIRECTIONS_ODD
+        dirs = DIRECTIONS
         # Obteniendo vecinos
         neighbors = []
         size = board.size
