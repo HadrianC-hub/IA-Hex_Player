@@ -155,6 +155,8 @@ class HexAIPlayer(Player):
         # A* heurístico
         my_path_cost = self.a_star(board, self.player_id)
         opp_path_cost = self.a_star(board, self.opponent_id)
+        if opp_path_cost <= 3:
+            score -= 300  # Penalización fuerte si el oponente casi conecta
         score += 1000 / (1 + my_path_cost)  # Mientras más costoso sea el camino, menor es la puntuación
         score -= 1000 / (1 + opp_path_cost) # Lo mismo para el análisis del jugador contrario
 
@@ -177,6 +179,30 @@ class HexAIPlayer(Player):
             score += friendly * 1.5
             score -= enemy * 1.5
 
+        # Bloqueo estratégico del oponente
+        for row in range(size):
+            for col in range(size):
+                cell = board.board[row][col]
+                if cell == self.player_id:
+                    # Detectar si esta ficha bloquea una dirección "natural" del oponente
+                    # Jugador 1: izquierda a derecha → bloqueamos en columnas
+                    # Jugador 2: arriba a abajo → bloqueamos en filas
+
+                    if self.opponent_id == 1:
+                        importance = col/size
+                        # Buscamos si esta ficha está rodeada por fichas enemigas horizontalmente
+                        if col > 0 and col < size - 1:
+                            if (board.board[row][col - 1] == self.opponent_id and
+                                board.board[row][col + 1] == self.opponent_id):
+                                score += 20 + (importance*10) # Ajustable según la importancia del bloqueo
+                    else:
+                        importance = row/size
+                        # Buscamos si está rodeada verticalmente
+                        if row > 0 and row < size - 1:
+                            if (board.board[row - 1][col] == self.opponent_id and
+                                board.board[row + 1][col] == self.opponent_id):
+                                score += 20 + (importance*10)
+
         return score
 
     def a_star(self, board: HexBoard, player_id): # Devuelve el costo mínimo de unir dos lados
@@ -198,7 +224,6 @@ class HexAIPlayer(Player):
             elif board.board[row][col] == 0:
                 heapq.heappush(heap, (1 + heuristic(row, col), 1, row, col))
 
-        # Se intenta llegar desde aquí hasta el otro lado por algún camino existente y se aumenta el costo en consecuencia
         while heap:
             priority, cost, row, col = heapq.heappop(heap)
             if (row, col) in visited:
@@ -212,8 +237,13 @@ class HexAIPlayer(Player):
                 if (nr, nc) in visited:
                     continue
                 cell = board.board[nr][nc]
-                new_cost = cost if cell == player_id else cost + 1
+                if cell == player_id:
+                    new_cost = cost  # Paso gratis por nuestras fichas
+                elif cell == 0:
+                    new_cost = cost + 1  # Paso válido, leve coste
+                else:
+                    continue  # Casilla del oponente, no transitable
                 heapq.heappush(heap, (new_cost + heuristic(nr, nc), new_cost, nr, nc))
 
-        # No hay camino posible
-        return math.inf
+        return math.inf  # No hay camino posible
+
