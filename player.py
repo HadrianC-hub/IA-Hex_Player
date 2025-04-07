@@ -242,12 +242,12 @@ class HexAIPlayer(Player):
                 cost = 1    # Costo uno para casillas vacías
             else:
                 continue  # Casilla del oponente, no válida para iniciar
-            heapq.heappush(heap, (cost + heuristic(row, col), cost, row, col))
+            heapq.heappush(heap, (cost + heuristic(row, col), cost, row, col))  # Se mete el costo+heuristic primero pq por ese término es q se ordena el heap
             cost_so_far[(row, col)] = cost
 
         # Analizando espacio de búsqueda
         while heap:
-            priority, cost, row, col = heapq.heappop(heap)
+            priority, cost, row, col = heapq.heappop(heap)  # Priority no la usamos más, solo es el término q se usa para ordenar
             if (row, col) in visited:
                 continue
             visited.add((row, col))
