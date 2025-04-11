@@ -48,13 +48,13 @@ def choose_players(): # Selección de jugador
     choice = input("Opción (1/2/3): ")
 
     if choice == "1":
-        return HumanPlayer(1), HumanPlayer(2)
+        return HumanPlayer(1,10), HumanPlayer(2,10)
     elif choice == "2":
-        return HumanPlayer(1), HexAIPlayer(2)
+        return HumanPlayer(1,10), HexAIPlayer(2,10)
     elif choice == "3":
-        return HexAIPlayer(1), HumanPlayer(2)
+        return HexAIPlayer(1,10), HumanPlayer(2,10)
     elif choice == "4":
-        return HexAIPlayer(1), HexAIPlayer(2)
+        return HexAIPlayer(1,10), HexAIPlayer(2,10)
     else:
         print("Opción inválida.")
         sys.exit(1)

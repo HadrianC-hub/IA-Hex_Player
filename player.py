@@ -6,12 +6,12 @@ import heapq
 import time
 
 DIRECTIONS = [(-1, 0), (1, 0), (-1, 1), (1, -1), (0, -1), (0, 1)]
-TIME_LIMIT = 3.0
 
 class HexAIPlayer(Player):
-    def __init__(self, player_id: int):
+    def __init__(self, player_id: int, time_limit):
         super().__init__(player_id) # Llamando al contructor de Player y asignando su player_id
         self.opponent_id = 2 if player_id == 1 else 1   # Id del oponente
+        self.time_limit = time_limit
 
     def play(self, board: HexBoard) -> tuple:
         #Iniciar el temporizador
@@ -25,9 +25,9 @@ class HexAIPlayer(Player):
         # Usar minimax
         _, move = self.minimax(board, dynamic_depth, -math.inf, math.inf, True)
 
-        # Calcular tiempo y retornar
-        duration = time.time() - start_time
-        print(f"Tiempo total de jugada: {duration:.3f}s")
+        # # Calcular tiempo y retornar
+        # duration = time.time() - start_time
+        # print(f"Tiempo total de jugada: {duration:.3f}s")
         return move
 
     def get_dynamic_depth(self, board: HexBoard, empty_cells) -> int: # Función para obtener la fase del juego (útil para la profundidad variable)
@@ -45,7 +45,7 @@ class HexAIPlayer(Player):
                                                                      # maximizing_player = Booleano que indica si es o no el turno de la IA
 
         # Cortamos la evaluación si nos pasamos de tiempo
-        if time.time() - self.start_time > TIME_LIMIT:
+        if time.time() - self.start_time > self.time_limit - 0.5:
             return self.evaluate(board), None
 
         # Caso base: Si ya se llegó a la profundidad esperada o el juego terminó, evalúa con heurística y devuelve el valor
